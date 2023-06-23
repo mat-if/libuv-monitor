@@ -23,7 +23,7 @@ jobs:
         with:
           version: 0.10.1
 
-      - run: ./build.sh
+      - run: npm run build x86_64-linux-gnu
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3

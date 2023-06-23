@@ -4,9 +4,9 @@
   "description": "",
   "main": "uvc.node",
   "scripts": {
-    "test": "./build.sh && node ./test.js",
+    "build": "./build.sh",
+    "test": "npm run build && node ./test.js",
     "test:ci": "node ./test.js"
   },
-  "author": "",
-  "license": "ISC"
+  "author": ""
 }
