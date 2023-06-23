@@ -1,0 +1,61 @@
+name: Testing libuv stuff
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log CPU Info
+        run: cat /proc/cpuinfo
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          # This should always be the current NodeJS LTS release.
+          node-version: 18.x 
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.10.1
+
+      - run: ./build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: uvc.node
+          path: ./uvc.node
+
+  test:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # This should only contain NodeJS LTS versions that are maintaince, active or current.
+        # Not convinced we want to support earlier than the current LTS release yet, though.
+        node-version: [14.x, 16.x, 18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log CPU Info
+        run: cat /proc/cpuinfo
+
+      - name: NodeJS Version ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: uvc.node
+          path: .
+
+      - run: npm run test:ci
