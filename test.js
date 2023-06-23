@@ -13,7 +13,7 @@ const LOOPS = 3;
 let count = 0;
 
 const f = () => {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
         let b = Buffer.alloc(2**20, 0)
         crypto.randomFill(b, (err, _) => {
             if (err) throw err;
@@ -28,7 +28,8 @@ const f = () => {
     if (count < LOOPS) {
         setTimeout(f, TIMEOUT);
     } else {
-        uvc.stopUvCheck();
+        setTimeout(() => console.log(uvc.getUvCheckInfo()), TIMEOUT)
+        setTimeout(() => uvc.stopUvCheck(), TIMEOUT * 2)
     }
 }
 

@@ -64,13 +64,18 @@ void check_callback(uv_check_t *handle) {
 
 void sum_active_handles(uv_handle_t *handle, void *total_count) {
     if (uv_is_active(handle)) {
+        // printf("\t%p: type: %d..%s\n", handle, handle->type, uv_handle_type_name(handle->type));
         *(uint32_t*)total_count += 1;
     }
 }
 
 static napi_value init_uv_check(napi_env env, napi_callback_info info) {
     uv_check_init(uv_default_loop(), &check_handle);
-    uv_check_start(&check_handle, &check_callback);
+
+    if (uv_check_start(&check_handle, &check_callback) != 0) {
+        napi_throw_error(env, 0, "Failed to start uv check callback");
+        return 0;
+    }
 
     return 0;
 }
@@ -81,7 +86,7 @@ static napi_value stop_uv_check(napi_env env, napi_callback_info info) {
     return 0;
 }
 
-static napi_value create_uv_info_object(napi_env env, napi_callback_info info, double idle_percent, uint32_t active_handles1, uint32_t active_handles2) {
+static napi_value create_uv_info_object(napi_env env, napi_callback_info info, double idle_percent, uint32_t active_handles, uint32_t active_reqs) {
     napi_value object;
 
     if (napi_create_object(env, &object) != napi_ok) {
@@ -94,8 +99,8 @@ static napi_value create_uv_info_object(napi_env env, napi_callback_info info, d
     OBJECT_PROPERTY(object, uint32, "sum", sum);
     OBJECT_PROPERTY(object, uint32, "count", count);
     OBJECT_PROPERTY(object, double, "idlePercent", idle_percent);
-    OBJECT_PROPERTY(object, uint32, "activeHandles1", active_handles1);
-    OBJECT_PROPERTY(object, uint32, "activeHandles2", active_handles2);
+    OBJECT_PROPERTY(object, uint32, "activeHandles", active_handles);
+    OBJECT_PROPERTY(object, uint32, "activeReqs", active_reqs);
 
     return object;
 }
@@ -110,11 +115,11 @@ static napi_value get_uv_check_info(napi_env env, napi_callback_info info) {
         idle_percent = ((idle_time - starting_idle_time) * 100.0) / sum;
     }
 
-    // TODO: What is the difference between these 2?
+    // TODO: What is the difference between this and event_loop->active_handles?
     uint32_t active_handles = 0;
     uv_walk(event_loop, &sum_active_handles, &active_handles);
 
-    return create_uv_info_object(env, info, idle_percent, active_handles, event_loop->active_handles);
+    return create_uv_info_object(env, info, idle_percent, active_handles, event_loop->active_reqs.count);
 }
 
 static napi_value uv_check(napi_env env, napi_callback_info info) {
