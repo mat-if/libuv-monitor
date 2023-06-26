@@ -1,6 +1,7 @@
 const crypto = require("node:crypto")
 
-const uvc = require('./uvc');
+const uvc = require('./uvc')
+const uvz = require('./uvz')
 
 uvc.uvCheck();
 
@@ -26,6 +27,7 @@ const check = () => {
 
     if (info.activeReqs <= next_checkpoint) {
         console.log(info)
+        console.log("Zig:", uvz.getActiveReqs())
         next_checkpoint -= CHECKPOINT
     }
 

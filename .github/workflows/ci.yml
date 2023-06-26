@@ -25,11 +25,17 @@ jobs:
 
       - run: npm run build x86_64-linux-gnu
 
-      - name: Upload artifact
+      - name: Upload C artifact
         uses: actions/upload-artifact@v3
         with:
           name: uvc.node
           path: ./uvc.node
+
+      - name: Upload Zig artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: uvz.node
+          path: ./uvz.node
 
   test:
     needs:
@@ -52,10 +58,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Download artifact
+      - name: Download C artifact
         uses: actions/download-artifact@v3
         with:
           name: uvc.node
+          path: .
+
+      - name: Download Zig artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: uvz.node
           path: .
 
       - run: npm run test:ci
