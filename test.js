@@ -2,35 +2,39 @@ const crypto = require("node:crypto")
 
 const uvc = require('./uvc');
 
-console.log("Hello world")
-
 uvc.uvCheck();
 
 uvc.initUvCheck();
 
-const TIMEOUT = 250;
-const LOOPS = 3;
-let count = 0;
+const JOBS = 500
+const CHECKPOINT = JOBS / 4
+var next_checkpoint = JOBS - CHECKPOINT
 
-const f = () => {
-    for (let i = 0; i < 5; i++) {
-        let b = Buffer.alloc(2**20, 0)
-        crypto.randomFill(b, (err, _) => {
-            if (err) throw err;
-        })
+console.log("Starting..")
+const start = process.hrtime.bigint()
+
+for (let i = 0; i < JOBS; i++) {
+    crypto.scrypt('asdjfkaljsdfkljasdklfjasdklfjasdklfjskladfjklsdafjklasdfjksldafjaskldfjksdlfjklasfjklsdjflkasdjfklsdajflksdjfklsd', 'salt', 64, (err, ) => {
+        if (err) throw err;
+    })
+}
+
+console.log("Kicked off all jobs. #:", uvc.getUvCheckInfo().activeReqs)
+
+const check = () => {
+    const info = uvc.getUvCheckInfo()
+
+    if (info.activeReqs <= next_checkpoint) {
+        console.log(info)
+        next_checkpoint -= CHECKPOINT
     }
 
-    console.log('')
-    const x = uvc.getUvCheckInfo();
-    console.log('x:', x)
-
-    count += 1;
-    if (count < LOOPS) {
-        setTimeout(f, TIMEOUT);
+    if (info.activeReqs == 0) {
+        console.log("Done. Took:", (process.hrtime.bigint() - start) / BigInt(1e6), "milliseconds")
+        uvc.stopUvCheck()
     } else {
-        setTimeout(() => console.log(uvc.getUvCheckInfo()), TIMEOUT)
-        setTimeout(() => uvc.stopUvCheck(), TIMEOUT * 2)
+        setTimeout(() => check())
     }
 }
 
-setTimeout(f, TIMEOUT);
+check()

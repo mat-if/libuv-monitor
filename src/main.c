@@ -32,6 +32,19 @@ uint32_t count = 0;
 uint64_t last_check = 0;
 uint64_t starting_idle_time = 0;
 // TODO: Add since_last metrics also
+uint32_t since_last_min = UINT32_MAX;
+uint32_t since_last_max = 0;
+uint64_t since_last_sum = 0;
+uint32_t since_last_count = 0;
+uint64_t since_last_info_call = 0;
+uint64_t since_last_idle_time = 0;
+
+void reset_since_last() {
+    since_last_min = UINT32_MAX;
+    since_last_max = 0;
+    since_last_sum = 0;
+    since_last_count = 0;
+}
 
 void check_callback(uv_check_t *handle) {
     uint32_t loop_elapsed;
@@ -60,6 +73,19 @@ void check_callback(uv_check_t *handle) {
     count += 1;
 
     last_check = now;
+
+    // TODO: Since last hackery
+    if (loop_elapsed < since_last_min) {
+        since_last_min = loop_elapsed;
+    }
+
+    if (loop_elapsed > since_last_max) {
+        since_last_max = loop_elapsed;
+    }
+
+    since_last_sum += loop_elapsed;
+
+    since_last_count += 1;
 }
 
 void sum_active_handles(uv_handle_t *handle, void *total_count) {
@@ -86,7 +112,7 @@ static napi_value stop_uv_check(napi_env env, napi_callback_info info) {
     return 0;
 }
 
-static napi_value create_uv_info_object(napi_env env, napi_callback_info info, double idle_percent, uint32_t active_handles, uint32_t active_reqs) {
+static napi_value create_uv_info_object(napi_env env, napi_callback_info info, double idle_percent, uint32_t active_handles, uint32_t active_reqs, double since_last_idle_percent) {
     napi_value object;
 
     if (napi_create_object(env, &object) != napi_ok) {
@@ -94,11 +120,16 @@ static napi_value create_uv_info_object(napi_env env, napi_callback_info info, d
         return 0;
     }
 
-    OBJECT_PROPERTY(object, uint32, "min", min);
-    OBJECT_PROPERTY(object, uint32, "max", max);
-    OBJECT_PROPERTY(object, uint32, "sum", sum);
-    OBJECT_PROPERTY(object, uint32, "count", count);
-    OBJECT_PROPERTY(object, double, "idlePercent", idle_percent);
+    OBJECT_PROPERTY(object, uint32, "lifetimeMin", min);
+    OBJECT_PROPERTY(object, uint32, "lifetimeMax", max);
+    OBJECT_PROPERTY(object, uint32, "lifetimeSum", sum);
+    OBJECT_PROPERTY(object, uint32, "lifetimeCount", count);
+    OBJECT_PROPERTY(object, double, "lifetimeIdlePercent", idle_percent);
+    OBJECT_PROPERTY(object, uint32, "sinceLastMin", since_last_min);
+    OBJECT_PROPERTY(object, uint32, "sinceLastMax", since_last_max);
+    OBJECT_PROPERTY(object, uint32, "sinceLastSum", since_last_sum);
+    OBJECT_PROPERTY(object, uint32, "sinceLastCount", since_last_count);
+    OBJECT_PROPERTY(object, double, "sinceLastIdlePercent", since_last_idle_percent);
     OBJECT_PROPERTY(object, uint32, "activeHandles", active_handles);
     OBJECT_PROPERTY(object, uint32, "activeReqs", active_reqs);
 
@@ -110,6 +141,8 @@ static napi_value get_uv_check_info(napi_env env, napi_callback_info info) {
 
     uint64_t idle_time = uv_metrics_idle_time(event_loop);
 
+    // TODO: Should this divided by the actual diff in hrtime from start to
+    // now, instead of the sum? Is sum completely accurate?
     double idle_percent = 100.0;
     if (sum > 0) {
         idle_percent = ((idle_time - starting_idle_time) * 100.0) / sum;
@@ -119,7 +152,19 @@ static napi_value get_uv_check_info(napi_env env, napi_callback_info info) {
     uint32_t active_handles = 0;
     uv_walk(event_loop, &sum_active_handles, &active_handles);
 
-    return create_uv_info_object(env, info, idle_percent, active_handles, event_loop->active_reqs.count);
+    // TODO: since last hackery
+    uint64_t since_last_i = idle_time - since_last_idle_time;
+    since_last_idle_time = idle_time;
+    double since_last_idle_percent = 100.0;
+    if (since_last_sum > 0) {
+        since_last_idle_percent = (since_last_i * 100.0) / since_last_sum;
+    }
+
+    napi_value info_object = create_uv_info_object(env, info, idle_percent, active_handles, event_loop->active_reqs.count, since_last_idle_percent);
+
+    reset_since_last();
+
+    return info_object;
 }
 
 static napi_value uv_check(napi_env env, napi_callback_info info) {
