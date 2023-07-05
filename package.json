@@ -1,8 +1,8 @@
 {
   "name": "libuv-monitor",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
-  "main": "uvc.node",
+  "main": "uvz.node",
   "scripts": {
     "build": "./build.sh",
     "test": "npm run build && node ./test.js",

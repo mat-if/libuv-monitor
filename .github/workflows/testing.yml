@@ -1,0 +1,15 @@
+name: Foo
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  foo:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo 'Hello World'
+          exit 0
+    
