@@ -1,0 +1,14 @@
+name: Foo
+
+on:
+  pull_request:
+    branches:
+      - 'master'
+
+jobs:
+  foo:
+    steps:
+      - run: |
+          echo 'Hello World'
+          exit 0
+    
