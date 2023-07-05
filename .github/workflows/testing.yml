@@ -2,6 +2,7 @@ name: Foo
 
 on:
   pull_request:
+    types: ['*']
     branches:
       - 'main'
 
@@ -9,7 +10,9 @@ jobs:
   foo:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo 'Hello World'
-          exit 0
+
+      - if: ${{ !contains(github.event.pull_request.title, 'MAIN') }}
+        run: |
+          echo 'PR base branch is MAIN and PR title does not contain the word'
+          exit 1
     
