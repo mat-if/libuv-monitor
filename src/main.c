@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <uv.h>
 
+// Hello
+
 #define NAPI_METHOD(NAME, FUNC) \
         { NAME, 0, FUNC, 0, 0, 0, napi_default, 0 }
 
